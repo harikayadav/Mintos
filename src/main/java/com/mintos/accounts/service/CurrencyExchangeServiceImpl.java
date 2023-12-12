@@ -6,14 +6,13 @@ import java.util.Collections;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import com.mintos.accounts.MintosAccountsDataApplication;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
@@ -23,17 +22,16 @@ public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
 	@Value("${exchange.api.url}")
 	private String exchangeApiUrl;
 
-	@Autowired
-	private final RestTemplate restTemplate;
+	@Value("${exchange.api.key}")
+	private String exchangeApiKey;
 
 	@Autowired
-	private final CircuitBreaker circuitBreaker;
+	@Qualifier("currencyExchangeRestTemplate")
+	private RestTemplate restTemplate;
 
-	public CurrencyExchangeServiceImpl(RestTemplate restTemplate) {
-		this.restTemplate = restTemplate;
-		this.circuitBreaker = CircuitBreaker.of("currencyExchange",
-				MintosAccountsDataApplication.circuitBreakerConfig());
-	}
+	@Autowired
+	@Qualifier("circuitBreakerCurrencyExchange")
+	private CircuitBreaker circuitBreaker;
 
 	@Override
 	public BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency) throws Exception {
@@ -42,7 +40,7 @@ public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
 
 	public BigDecimal getConvertedCurrency(BigDecimal amount, String fromCurrency, String toCurrency) {
 		BigDecimal exchangeRate = new BigDecimal(0);
-		String url = String.format("%s/49a1430ad3321c9293879278/latest/%s", exchangeApiUrl, fromCurrency);
+		String url = String.format("%s/%s/latest/%s", exchangeApiUrl, exchangeApiKey, fromCurrency);
 		HttpHeaders headers = new HttpHeaders();
 		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 		try {
@@ -53,7 +51,7 @@ public class CurrencyExchangeServiceImpl implements CurrencyExchangeService {
 				exchangeRate = conversionRates.getBigDecimal(toCurrency);
 			}
 		} catch (RuntimeException exception) {
-			throw new RuntimeException("Currency conversion service is unavailable");
+			throw new RuntimeException("Currency conversion service is unavailable. Please try Later");
 		}
 
 		return exchangeRate.multiply(amount);

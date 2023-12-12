@@ -1,7 +1,5 @@
--- Insert data into client table
 INSERT INTO client (id) VALUES (1), (2), (3), (4);
 
--- Insert data into account table
 INSERT INTO account (id, client_id, currency, account_number, balance) VALUES
     (1, 1, 'USD','987000', 0),
     (2, 1, 'EUR','987001', 1000.00),
@@ -12,7 +10,6 @@ INSERT INTO account (id, client_id, currency, account_number, balance) VALUES
     (7, 2, 'GBP','987006', 670.00),
     (8, 3, 'USD','987007', 100.00);
 
--- Insert data into transaction table
 INSERT INTO transaction (id, account_number, amount, trans_date) VALUES
     (1, '987000', 100.50,'2023-01-01'),
     (2, '987001', 50.25,'1998-05-09'),

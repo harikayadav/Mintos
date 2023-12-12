@@ -1,6 +1,7 @@
 package com.mintos.accounts.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -30,20 +31,35 @@ class CurrencyExchangeServiceImplTests {
 	@InjectMocks
 	private CurrencyExchangeServiceImpl currencyExchangeService;
 
-	@SuppressWarnings("unchecked")
 	@Test
 	void testConvertCurrency() throws Exception {
-		BigDecimal amount = new BigDecimal("100.00");
-		String fromCurrency = "USD";
-		String toCurrency = "EUR";
 
-		String responseBody = "{\"conversion_rates\": {\"EUR\": 0.85}}";
-		ResponseEntity<String> responseEntity = ResponseEntity.ok(responseBody);
+		when(circuitBreaker.executeCallable(any())).thenReturn(new BigDecimal(1.5));
+
+		BigDecimal result = currencyExchangeService.convertCurrency(new BigDecimal(100), "USD", "EUR");
+
+		assertEquals(new BigDecimal(1.5), result);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	void testGetConvertedCurrency() {
 		when(restTemplate.exchange(any(), any(HttpMethod.class), any(), any(Class.class), any(HttpHeaders.class)))
-				.thenReturn(responseEntity);
+				.thenReturn(ResponseEntity.ok("{\"conversion_rates\":{\"USD\":1.5,\"EUR\":1}}"));
 
-		BigDecimal result = currencyExchangeService.convertCurrency(amount, fromCurrency, toCurrency);
+		BigDecimal result = currencyExchangeService.getConvertedCurrency(new BigDecimal(100.0), "USD", "EUR");
 
-		assertEquals(new BigDecimal("85.0000"), result);
+		assertEquals(new BigDecimal(100), result);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	void testGetConvertedCurrencyWithRuntimeException() {
+
+		when(restTemplate.exchange(any(), any(HttpMethod.class), any(), any(Class.class), any(HttpHeaders.class)))
+				.thenThrow(new RuntimeException("Currency conversion service is unavailable. Please try Later"));
+
+		assertThrows(RuntimeException.class,
+				() -> currencyExchangeService.getConvertedCurrency(new BigDecimal(100), "USD", "EUR"));
 	}
 }
